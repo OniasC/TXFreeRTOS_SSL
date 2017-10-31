@@ -41,7 +41,7 @@ extern "C"{
 #include "radio/bsp.h"
 #include "radio/commands.h"
 
-void vTask1( void *pvParameters){
+void vTaskLed1( void *pvParameters){
 	//const char *pcTaskName = "Task 1 is running \r\n";
 	//volatile uint32_t ul;
 
@@ -55,7 +55,23 @@ void vTask1( void *pvParameters){
 
 	}
 }
+void vTaskLed2( void *pvParameters){
+	//const char *pcTaskName = "Task 1 is running \r\n";
+	//volatile uint32_t ul;
+	NRF24L01P *_nrf24;
+	_nrf24->Init();
+	_nrf24->Config();
+	//configASSERT( ( ( uint32_t ) pvParameters ) == 1 );
+	//a tarefa tem implementada nela um loop infinito.
+	for(;;){
+		int delay;
+		delay = pdMS_TO_TICKS(100);
+		vTaskDelay(delay);
+		GPIOD->ODR ^= GPIO_Pin_12;
 
+
+	}
+}
 void vTask2( void *pvParameters){
 	for(;;){
 		int delay;
@@ -88,15 +104,29 @@ int main(void)
    GPIO_InitStructure.GPIO_PuPd = GPIO_PuPd_UP;
    GPIO_InitStructure.GPIO_Speed = GPIO_Speed_50MHz;
    GPIO_Init(GPIOD, &GPIO_InitStructure);
-   xTaskCreate(	vTask1, //ponteiro para a função que implementa a tarefa
-		  "Task 1", 	//nome da função. Para facilitar o debug.
+
+   GPIO_InitStructure.GPIO_Pin = GPIO_Pin_12;
+   GPIO_InitStructure.GPIO_Mode = GPIO_Mode_OUT;
+   GPIO_InitStructure.GPIO_OType = GPIO_OType_PP;
+   GPIO_InitStructure.GPIO_PuPd = GPIO_PuPd_UP;
+   GPIO_InitStructure.GPIO_Speed = GPIO_Speed_50MHz;
+   GPIO_Init(GPIOD, &GPIO_InitStructure);
+
+   xTaskCreate(	vTaskLed1, //ponteiro para a função que implementa a tarefa
+		  "Task Led1", 	//nome da função. Para facilitar o debug.
 		  150, 		//stack depth
+		  NULL, 		//nao usa task parameter
+		  1,			//prioridade 1
+		  NULL);
+   xTaskCreate(	vTaskLed2, //ponteiro para a função que implementa a tarefa
+		  "Task Led2", 	//nome da função. Para facilitar o debug.
+		  700, 		//stack depth
 		  NULL, 		//nao usa task parameter
 		  1,			//prioridade 1
 		  NULL);
    xTaskCreate(	vTask2, //ponteiro para a função que implementa a tarefa
 		  "Task 2", 	//nome da função. Para facilitar o debug.
-		  800, 		//stack depth
+		  700, 		//stack depth
 		  NULL, 		//nao usa task parameter
 		  1,			//prioridade 1
 		  NULL);

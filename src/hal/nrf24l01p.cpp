@@ -2,6 +2,12 @@
 #include <hal/nrf24l01p.h>
 #include <utils/time_functions.h>
 
+#include "FreeRTOS.h"
+#include "task.h"
+#include "timers.h"
+#include "StackMacros.h"
+#include "projdefs.h"
+
 NRF24L01P::NRF24L01P(SPI &spi, IO_Pin &SS_PIN, IO_Pin &CE_PIN, IO_Pin &NIRQ_PIN):
 	MODEM(),
 	_spi(&spi),
@@ -152,7 +158,8 @@ uint8_t NRF24L01P::nop() {
 void NRF24L01P::Init(){
 	_CE_PIN->Reset();
 	_SS_PIN->Set();
-	delay_ms(5);
+
+	vTaskDelay(pdMS_TO_TICKS(5));
 	REG=REG_DEFAULT;
 
 	uint8_t config=read_register(REG_ADDR.CONFIG);
