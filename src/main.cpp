@@ -40,6 +40,7 @@ extern "C"{
 
 #include "radio/bsp.h"
 #include "radio/commands.h"
+#include "hal/nrf24l01p.h"
 
 void vTaskLed1( void *pvParameters){
 	//const char *pcTaskName = "Task 1 is running \r\n";
@@ -51,14 +52,82 @@ void vTaskLed1( void *pvParameters){
 		int delay;
 		delay = pdMS_TO_TICKS(1000);
 		vTaskDelay(delay);
-		GPIOD->ODR ^= GPIO_Pin_13;
-
+		//GPIOD->ODR ^= GPIO_Pin_13;
+		led_laranja.Toggle();
 	}
 }
-void vTaskLed2( void *pvParameters){
+void vTaskNRF24TX( void *pvParameters){
 	//const char *pcTaskName = "Task 1 is running \r\n";
 	//volatile uint32_t ul;
-	NRF24L01P *_nrf24;
+	NRF24L01P *_nrf24=(NRF24L01P*)pvParameters;
+	_nrf24->Init();
+	_nrf24->Config();
+	uint8_t channel;
+	uint64_t address;
+	uint8_t* data;
+	uint16_t size;
+	//configASSERT( ( ( uint32_t ) pvParameters ) == 1 );
+
+	channel=92;
+	address=0xE7E7E7E7E7;
+
+	for(;;){
+		int delay;
+		delay = pdMS_TO_TICKS(100);
+		vTaskDelay(delay);
+		//GPIOD->ODR ^= GPIO_Pin_12;
+		led_verde.Toggle();
+
+		uint8_t buffer[32];
+		uint8_t received_length;
+
+		received_length = usb_device_class_cdc_vcp.GetData(buffer, 32);
+		_nrf24->TxPackage_ESB(channel, address, 0, (uint8_t*) buffer, received_length);
+		while(_nrf24->Busy()){
+			_nrf24->InterruptCallback();
+		}
+		usb_device_class_cdc_vcp.SendData(buffer , received_length);
+	}
+}
+
+void vTaskNRF24RX( void *pvParameters){
+	//const char *pcTaskName = "Task 1 is running \r\n";
+	//volatile uint32_t ul;
+	NRF24L01P *_nrf24=(NRF24L01P*)pvParameters;
+	_nrf24->Init();
+	_nrf24->Config();
+	uint8_t channel;
+	uint64_t address;
+	uint8_t* data;
+	uint16_t size;
+	//configASSERT( ( ( uint32_t ) pvParameters ) == 1 );
+	channel=92;
+	address=0xE7E7E7E7E7;
+	_nrf24->StartRX_ESB(channel, address, 32, 1);
+
+	for(;;){
+		int delay;
+		delay = pdMS_TO_TICKS(100);
+		vTaskDelay(delay);
+		GPIOD->ODR ^= GPIO_Pin_12;
+
+		_nrf24->InterruptCallback();
+
+		if(_nrf24->RxSize()){
+			_nrf24->StartRX_ESB(channel, address, 32, 1);
+			uint8_t rxsize=_nrf24->RxSize();
+			if(rxsize>32) rxsize=32;
+			uint8_t buffer[32];
+			_nrf24->RxData(buffer, rxsize);
+			led_azul.Toggle();
+
+			usb_device_class_cdc_vcp.SendData(buffer , rxsize);
+		}
+	}
+}
+
+void vTaskMotor( void *pvParameters){
+	NRF24L01P *_nrf24=(NRF24L01P*)pvParameters;
 	_nrf24->Init();
 	_nrf24->Config();
 	//configASSERT( ( ( uint32_t ) pvParameters ) == 1 );
@@ -68,16 +137,14 @@ void vTaskLed2( void *pvParameters){
 		delay = pdMS_TO_TICKS(100);
 		vTaskDelay(delay);
 		GPIOD->ODR ^= GPIO_Pin_12;
-
-
 	}
 }
+
 void vTask2( void *pvParameters){
 	for(;;){
 		int delay;
 		delay = pdMS_TO_TICKS(10);
 		vTaskDelay(delay);
-
 		usb_device_class_cdc_vcp.GetData(_usbserialbuffer, 1024);
 		cmdline.In(_usbserialbuffer);
 		cmdline.Out(_usbserialbuffer);
@@ -89,28 +156,11 @@ void vTask2( void *pvParameters){
 
 int main(void)
 {
-  int i = 0;
+  //int i = 0;
   usb.Init();
+ // robo.Init();
+
   SysTick_Config(SystemCoreClock/1000);
-  GPIO_InitTypeDef  GPIO_InitStructure;
-
-    /* Enable the GPIO_LED Clock */
-   RCC_AHB1PeriphClockCmd(RCC_AHB1Periph_GPIOD, ENABLE);
-
-    /* Configure the GPIO_LED pin */
-   GPIO_InitStructure.GPIO_Pin = GPIO_Pin_13;
-   GPIO_InitStructure.GPIO_Mode = GPIO_Mode_OUT;
-   GPIO_InitStructure.GPIO_OType = GPIO_OType_PP;
-   GPIO_InitStructure.GPIO_PuPd = GPIO_PuPd_UP;
-   GPIO_InitStructure.GPIO_Speed = GPIO_Speed_50MHz;
-   GPIO_Init(GPIOD, &GPIO_InitStructure);
-
-   GPIO_InitStructure.GPIO_Pin = GPIO_Pin_12;
-   GPIO_InitStructure.GPIO_Mode = GPIO_Mode_OUT;
-   GPIO_InitStructure.GPIO_OType = GPIO_OType_PP;
-   GPIO_InitStructure.GPIO_PuPd = GPIO_PuPd_UP;
-   GPIO_InitStructure.GPIO_Speed = GPIO_Speed_50MHz;
-   GPIO_Init(GPIOD, &GPIO_InitStructure);
 
    xTaskCreate(	vTaskLed1, //ponteiro para a função que implementa a tarefa
 		  "Task Led1", 	//nome da função. Para facilitar o debug.
@@ -118,18 +168,30 @@ int main(void)
 		  NULL, 		//nao usa task parameter
 		  1,			//prioridade 1
 		  NULL);
-   xTaskCreate(	vTaskLed2, //ponteiro para a função que implementa a tarefa
-		  "Task Led2", 	//nome da função. Para facilitar o debug.
+   xTaskCreate(	vTaskNRF24TX, //ponteiro para a função que implementa a tarefa
+		  "Task NRF24TX", 	//nome da função. Para facilitar o debug.
 		  700, 		//stack depth
-		  NULL, 		//nao usa task parameter
+		  (void*)&nrf24, 		//nao usa task parameter
 		  1,			//prioridade 1
 		  NULL);
-   xTaskCreate(	vTask2, //ponteiro para a função que implementa a tarefa
+   //xTaskCreate(	vTaskNRF24RX, //ponteiro para a função que implementa a tarefa
+   	//  "Task NRF24RX", 	//nome da função. Para facilitar o debug.
+   	//  700, 		//stack depth
+   	//  (void*)&nrf24, 		//nao usa task parameter
+   	//  1,			//prioridade 1
+   	//  NULL);
+   /*xTaskCreate(	vTask2, //ponteiro para a função que implementa a tarefa
 		  "Task 2", 	//nome da função. Para facilitar o debug.
 		  700, 		//stack depth
 		  NULL, 		//nao usa task parameter
 		  1,			//prioridade 1
-		  NULL);
+		  NULL);*/
+//   xTaskCreate(	vTaskMotor, //ponteiro para a função que implementa a tarefa
+//   		  "Task Motor", 	//nome da função. Para facilitar o debug.
+//   		  700, 		//stack depth
+//   		  NULL, 		//nao usa task parameter
+//   		  1,			//prioridade 1
+//   		  NULL);
   vTaskStartScheduler();
   while (1)
   {

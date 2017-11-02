@@ -14,8 +14,13 @@ extern "C"{
 	#include "usb_dcd_int.h"
 	#include "usb_hcd_int.h"
 }
+//------------setando os leds----------------//
+LED led_verde(new IO_Pin_STM32 (IO_Pin::IO_Pin_Mode_OUT, GPIOD, GPIO_Pin_12)); //led verde
+LED led_laranja(new IO_Pin_STM32 (IO_Pin::IO_Pin_Mode_OUT, GPIOD, GPIO_Pin_13)); //led laranja
+LED led_vermelho(new IO_Pin_STM32 (IO_Pin::IO_Pin_Mode_OUT, GPIOD, GPIO_Pin_14)); //led vermelho
+LED led_azul(new IO_Pin_STM32 (IO_Pin::IO_Pin_Mode_OUT, GPIOD, GPIO_Pin_15)); //led azul
 //-------------setando o botão--------------//
-IO_Pin_STM32 Botao(IO_Pin::IO_Pin_Mode_IN, GPIOA, GPIO_Pin_0, GPIO_PuPd_NOPULL);
+//IO_Pin_STM32 Botao(IO_Pin::IO_Pin_Mode_IN, GPIOA, GPIO_Pin_0, GPIO_PuPd_NOPULL);
 
 //-------------setando o usb--------------//
 IO_Pin_STM32 USB_DP(IO_Pin::IO_Pin_Mode_SPECIAL, GPIOA, GPIO_Pin_12, GPIO_PuPd_NOPULL, GPIO_OType_PP, GPIO_AF_OTG_FS);
@@ -40,6 +45,21 @@ SPI_STM32 spi(SPI1, NRF24_SS_PIN);
 NRF24L01P nrf24(spi, NRF24_SS_PIN, NRF24_CE_PIN, NRF24_IRQN_PIN);
 
 IO_Pin_STM32 LIS3DSH_CSN(IO_Pin::IO_Pin_Mode_IN, GPIOE, GPIO_Pin_3, GPIO_PuPd_NOPULL, GPIO_OType_OD);
+
+/*------------PARA USAR QND TIVER COM OS MOTORES---------------
+//INTERRUPT_STM32 nrf24_irqn_exti_interrupt(NRF24_IRQN_PIN.GetIRQChannel(), 0x0C, 0x0C, DISABLE);
+Timer_Time2 robo_timer;
+
+//checar os minas no desenho da placa
+
+Pwm ahpwm0(GPIOC, GPIO_Pin_9, TIM8, GPIO_PinSource9, GPIO_AF_TIM8, 4, false);
+GPIO algpio0(GPIOE, GPIO_Pin_5);
+Pwm bhpwm0(GPIOC, GPIO_Pin_7, TIM8, GPIO_PinSource7, GPIO_AF_TIM8, 2, false);
+GPIO blgpio0(GPIOC, GPIO_Pin_13);
+Encoder encoder0(GPIOB, GPIOB, GPIO_Pin_4, GPIO_Pin_5, TIM3, GPIO_PinSource4, GPIO_PinSource5, GPIO_AF_TIM3);
+INA220 mina220(i2c_a, 0x80);
+Motor motor0(&ahpwm0, &algpio0, &bhpwm0, &blgpio0, &encoder0, &robo_timer, &mina220);
+*///------------------------/////////
 
 CircularBuffer<uint8_t> _usbserialbuffer(0,2048);
 CircularBuffer<uint8_t> _usbserialbuffer2(0,2048);
