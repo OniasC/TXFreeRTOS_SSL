@@ -8,7 +8,7 @@
 #include <list>
 //#include <control/Robo.h>
 //#include <control/Switch.h>
-//#include "TimerTime.h"
+#include "TimerTime.h"
 
 extern "C"{
 	#include "usb_dcd_int.h"
@@ -46,11 +46,12 @@ NRF24L01P nrf24(spi, NRF24_SS_PIN, NRF24_CE_PIN, NRF24_IRQN_PIN);
 
 IO_Pin_STM32 LIS3DSH_CSN(IO_Pin::IO_Pin_Mode_IN, GPIOE, GPIO_Pin_3, GPIO_PuPd_NOPULL, GPIO_OType_OD);
 
-/*------------PARA USAR QND TIVER COM OS MOTORES---------------
+//------------PARA USAR QND TIVER COM OS MOTORES---------------
 //INTERRUPT_STM32 nrf24_irqn_exti_interrupt(NRF24_IRQN_PIN.GetIRQChannel(), 0x0C, 0x0C, DISABLE);
-Timer_Time2 robo_timer;
 
-//checar os minas no desenho da placa
+IO_Pin_STM32 I2C_A_SDA_PIN(IO_Pin::IO_Pin_Mode_SPECIAL, GPIOB, GPIO_Pin_9, GPIO_PuPd_NOPULL, GPIO_OType_OD, GPIO_AF_I2C1);
+IO_Pin_STM32 I2C_A_SCL_PIN(IO_Pin::IO_Pin_Mode_SPECIAL, GPIOB, GPIO_Pin_8, GPIO_PuPd_NOPULL, GPIO_OType_OD, GPIO_AF_I2C1);
+I2C_STM32 i2c_a(I2C_A_SDA_PIN, I2C_A_SCL_PIN, I2C1, 100000, 0x4000);
 
 Pwm ahpwm0(GPIOC, GPIO_Pin_9, TIM8, GPIO_PinSource9, GPIO_AF_TIM8, 4, false);
 GPIO algpio0(GPIOE, GPIO_Pin_5);
@@ -58,19 +59,38 @@ Pwm bhpwm0(GPIOC, GPIO_Pin_7, TIM8, GPIO_PinSource7, GPIO_AF_TIM8, 2, false);
 GPIO blgpio0(GPIOC, GPIO_Pin_13);
 Encoder encoder0(GPIOB, GPIOB, GPIO_Pin_4, GPIO_Pin_5, TIM3, GPIO_PinSource4, GPIO_PinSource5, GPIO_AF_TIM3);
 INA220 mina220(i2c_a, 0x80);
-Motor motor0(&ahpwm0, &algpio0, &bhpwm0, &blgpio0, &encoder0, &robo_timer, &mina220);
-*///------------------------/////////
+Motor motor0(&ahpwm0, &algpio0, &bhpwm0, &blgpio0, &encoder0, &mina220);
+//*///------------------------/////////
 
 CircularBuffer<uint8_t> _usbserialbuffer(0,2048);
 CircularBuffer<uint8_t> _usbserialbuffer2(0,2048);
 
+TaskHandle_t t1; //handler para vTaskMotor
+SemaphoreHandle_t xBinarySemaphore = xSemaphoreCreateBinary();
+
+Timer_Time robo_irq_timer;
+INTERRUPT_STM32 timer_robot(TIM6_DAC_IRQn, 0x0C, 0x0C, ENABLE);
+
 INTERRUPT_STM32 usb_otg_fs_interrupt(OTG_FS_IRQn, 0x0D, 0x0D, ENABLE);
 
 extern USB_OTG_CORE_HANDLE USB_OTG_dev;
+
+extern "C" void TIM6_DAC_IRQHandler(){
+	if(TIM_GetITStatus(TIM6,TIM_IT_Update)){
+		TIM_ClearITPendingBit(TIM6,TIM_IT_Update);
+		BaseType_t xHigherPriorityTaskWoken = pdFALSE;
+		xSemaphoreGiveFromISR( xBinarySemaphore, &xHigherPriorityTaskWoken );
+		//xTaskNotifyFromISR(t1, 500, eSetValueWithOverwrite, &xHigherPriorityTaskWoken);
+		portEND_SWITCHING_ISR(xHigherPriorityTaskWoken);//TODO: pesquisar diferença entre portEND e portaYield
+		led_azul.Toggle();
+	}
+}
+
 extern "C" void OTG_FS_IRQHandler(void){
 	USBD_OTG_ISR_Handler (&USB_OTG_dev);
 	USBH_OTG_ISR_Handler (&USB_OTG_dev);
 }
+
 extern "C" void OTG_FS_WKUP_IRQHandler(void){
 	if(USB_OTG_dev.cfg.low_power){
 		*(uint32_t *)(0xE000ED10) &= 0xFFFFFFF9 ;

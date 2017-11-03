@@ -57,6 +57,7 @@
 									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/TXFreeRTOS_SSL/Libraries/STM32_USB_HOST_Library/Core/inc}&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/TXFreeRTOS_SSL/Libraries/STM32_USB_OTG_Driver/inc}&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/TXFreeRTOS_SSL/inc/usb}&quot;"/>
+									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/TXFreeRTOS_SSL/src/control}&quot;"/>
 								</option>
 								<option id="com.atollic.truestudio.common_options.target.endianess.353719485" name="Endianess" superClass="com.atollic.truestudio.common_options.target.endianess"/>
 								<option id="com.atollic.truestudio.common_options.target.mcpu.942652847" name="Microcontroller" superClass="com.atollic.truestudio.common_options.target.mcpu" value="STM32F407VG" valueType="enumerated"/>
@@ -97,6 +98,7 @@
 									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/TXFreeRTOS_SSL/Libraries/STM32_USB_Device_Library/Core/inc}&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/TXFreeRTOS_SSL/Libraries/STM32_USB_HOST_Library/Core/inc}&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/TXFreeRTOS_SSL/inc/usb}&quot;"/>
+									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/TXFreeRTOS_SSL/src/control}&quot;"/>
 								</option>
 								<option id="com.atollic.truestudio.common_options.target.endianess.473104749" name="Endianess" superClass="com.atollic.truestudio.common_options.target.endianess"/>
 								<option id="com.atollic.truestudio.common_options.target.mcpu.171057367" name="Microcontroller" superClass="com.atollic.truestudio.common_options.target.mcpu" value="STM32F407VG" valueType="enumerated"/>
@@ -267,7 +269,14 @@
 		<project id="TXFreeRTOS_SSL.com.atollic.truestudio.exe.1283256667" name="Executable" projectType="com.atollic.truestudio.exe"/>
 	</storageModule>
 	<storageModule moduleId="org.eclipse.cdt.core.LanguageSettingsProviders"/>
-	<storageModule moduleId="refreshScope"/>
+	<storageModule moduleId="refreshScope" versionNumber="2">
+		<configuration configurationName="Debug">
+			<resource resourceType="PROJECT" workspacePath="/TXFreeRTOS_SSL"/>
+		</configuration>
+		<configuration configurationName="Release">
+			<resource resourceType="PROJECT" workspacePath="/TXFreeRTOS_SSL"/>
+		</configuration>
+	</storageModule>
 	<storageModule moduleId="org.eclipse.cdt.make.core.buildtargets"/>
 	<storageModule moduleId="scannerConfiguration">
 		<autodiscovery enabled="true" problemReportingEnabled="true" selectedProfileId=""/>

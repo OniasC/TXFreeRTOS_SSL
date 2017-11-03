@@ -1,0 +1,2 @@
+TimerTime2.cpp:10:1:Timer_Time2::Timer_Time2()	32	static
+TimerTime2.cpp:24:10:uint32_t Timer_Time2::current_time()	16	static

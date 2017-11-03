@@ -40,7 +40,9 @@ extern "C"{
 
 #include "radio/bsp.h"
 #include "radio/commands.h"
-#include "hal/nrf24l01p.h"
+
+#include "motor.h"
+
 
 void vTaskLed1( void *pvParameters){
 	//const char *pcTaskName = "Task 1 is running \r\n";
@@ -127,16 +129,14 @@ void vTaskNRF24RX( void *pvParameters){
 }
 
 void vTaskMotor( void *pvParameters){
-	NRF24L01P *_nrf24=(NRF24L01P*)pvParameters;
-	_nrf24->Init();
-	_nrf24->Config();
-	//configASSERT( ( ( uint32_t ) pvParameters ) == 1 );
-	//a tarefa tem implementada nela um loop infinito.
+	Motor *_motor=(Motor*)pvParameters;
+	int16_t answer;
+	answer=500;
+	//_motor->SetDutyCycle(answer);
 	for(;;){
-		int delay;
-		delay = pdMS_TO_TICKS(100);
-		vTaskDelay(delay);
-		GPIOD->ODR ^= GPIO_Pin_12;
+		xSemaphoreTake( xBinarySemaphore, portMAX_DELAY );
+		led_vermelho.Toggle();
+		_motor->Control_Speed(0);
 	}
 }
 
@@ -166,13 +166,13 @@ int main(void)
 		  "Task Led1", 	//nome da função. Para facilitar o debug.
 		  150, 		//stack depth
 		  NULL, 		//nao usa task parameter
-		  1,			//prioridade 1
+		  2,			//prioridade 1
 		  NULL);
    xTaskCreate(	vTaskNRF24TX, //ponteiro para a função que implementa a tarefa
 		  "Task NRF24TX", 	//nome da função. Para facilitar o debug.
 		  700, 		//stack depth
-		  (void*)&nrf24, 		//nao usa task parameter
-		  1,			//prioridade 1
+		  (void*)&nrf24, 		//usa task parameter
+		  2,			//prioridade 2
 		  NULL);
    //xTaskCreate(	vTaskNRF24RX, //ponteiro para a função que implementa a tarefa
    	//  "Task NRF24RX", 	//nome da função. Para facilitar o debug.
@@ -186,19 +186,18 @@ int main(void)
 		  NULL, 		//nao usa task parameter
 		  1,			//prioridade 1
 		  NULL);*/
-//   xTaskCreate(	vTaskMotor, //ponteiro para a função que implementa a tarefa
-//   		  "Task Motor", 	//nome da função. Para facilitar o debug.
-//   		  700, 		//stack depth
-//   		  NULL, 		//nao usa task parameter
-//   		  1,			//prioridade 1
-//   		  NULL);
+    xTaskCreate(	vTaskMotor, //ponteiro para a função que implementa a tarefa
+   		  "Task Motor", 	//nome da função. Para facilitar o debug.
+   		  700, 				//stack depth
+  		  (void*)&motor0, 			//usa task parameter
+ 		  1,				//prioridade 1
+		  &t1 );
   vTaskStartScheduler();
   while (1)
   {
 	//i++;
   }
 }
-
 
 extern "C" void vApplicationStackOverflowHook( xTaskHandle pxTask, signed char *pcTaskName ){
 	( void ) pcTaskName;
