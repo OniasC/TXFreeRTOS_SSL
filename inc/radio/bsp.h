@@ -50,4 +50,5 @@ extern CircularBuffer<uint8_t> _usbserialbuffer;
 extern CircularBuffer<uint8_t> _usbserialbuffer2;
 extern TaskHandle_t t1;
 extern SemaphoreHandle_t xBinarySemaphore;
+extern QueueHandle_t fila_vel;
 

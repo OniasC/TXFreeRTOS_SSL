@@ -6,7 +6,7 @@
 #include <hal_stm32/interrupt_stm32.h>
 #include <radio/version.h>
 #include <list>
-//#include <control/Robo.h>
+#include <control/Robo.h>
 //#include <control/Switch.h>
 #include "TimerTime.h"
 
@@ -65,11 +65,14 @@ Motor motor0(&ahpwm0, &algpio0, &bhpwm0, &blgpio0, &encoder0, &mina220);
 CircularBuffer<uint8_t> _usbserialbuffer(0,2048);
 CircularBuffer<uint8_t> _usbserialbuffer2(0,2048);
 
+//--------------------cria a queue p envio dos pacotes------------
+QueueHandle_t fila_vel = xQueueCreate(12, sizeof(vel_robo*));
+
 TaskHandle_t t1; //handler para vTaskMotor
-SemaphoreHandle_t xBinarySemaphore = xSemaphoreCreateBinary();
+//SemaphoreHandle_t xBinarySemaphore = xSemaphoreCreateBinary();
 
 Timer_Time robo_irq_timer;
-INTERRUPT_STM32 timer_robot(TIM6_DAC_IRQn, 0x0C, 0x0C, ENABLE);
+//
 
 INTERRUPT_STM32 usb_otg_fs_interrupt(OTG_FS_IRQn, 0x0D, 0x0D, ENABLE);
 
@@ -79,8 +82,8 @@ extern "C" void TIM6_DAC_IRQHandler(){
 	if(TIM_GetITStatus(TIM6,TIM_IT_Update)){
 		TIM_ClearITPendingBit(TIM6,TIM_IT_Update);
 		BaseType_t xHigherPriorityTaskWoken = pdFALSE;
-		xSemaphoreGiveFromISR( xBinarySemaphore, &xHigherPriorityTaskWoken );
-		//xTaskNotifyFromISR(t1, 500, eSetValueWithOverwrite, &xHigherPriorityTaskWoken);
+		//xSemaphoreGiveFromISR( xBinarySemaphore, &xHigherPriorityTaskWoken );
+		xTaskNotifyFromISR(t1, 500, eSetValueWithOverwrite, &xHigherPriorityTaskWoken);
 		portEND_SWITCHING_ISR(xHigherPriorityTaskWoken);//TODO: pesquisar diferença entre portEND e portaYield
 		led_azul.Toggle();
 	}

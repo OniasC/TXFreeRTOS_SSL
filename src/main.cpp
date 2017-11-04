@@ -41,6 +41,8 @@ extern "C"{
 #include "radio/bsp.h"
 #include "radio/commands.h"
 
+#include <hal_stm32/interrupt_stm32.h>
+#include "Robo.h"
 #include "motor.h"
 
 
@@ -59,17 +61,12 @@ void vTaskLed1( void *pvParameters){
 	}
 }
 void vTaskNRF24TX( void *pvParameters){
-	//const char *pcTaskName = "Task 1 is running \r\n";
-	//volatile uint32_t ul;
+
 	NRF24L01P *_nrf24=(NRF24L01P*)pvParameters;
 	_nrf24->Init();
 	_nrf24->Config();
 	uint8_t channel;
 	uint64_t address;
-	uint8_t* data;
-	uint16_t size;
-	//configASSERT( ( ( uint32_t ) pvParameters ) == 1 );
-
 	channel=92;
 	address=0xE7E7E7E7E7;
 
@@ -132,18 +129,30 @@ void vTaskMotor( void *pvParameters){
 	Motor *_motor=(Motor*)pvParameters;
 	int16_t answer;
 	answer=500;
+	int delay;
+	delay = pdMS_TO_TICKS(100);
+	INTERRUPT_STM32 timer_robot(TIM6_DAC_IRQn, 0x0C, 0x0C, ENABLE);
 	//_motor->SetDutyCycle(answer);
+	vel_robo* velocidades_rec;
+	float motor_speeds[4];
 	for(;;){
-		xSemaphoreTake( xBinarySemaphore, portMAX_DELAY );
+		if(uxQueueMessagesWaiting(fila_vel)){
+			xQueueReceive(fila_vel, &velocidades_rec, portMAX_DELAY);
+			for (int i=0;i<4;i++)	motor_speeds[i]=velocidades_rec->vel[i];
+			delete velocidades_rec;
+			led_verde.Toggle();
+		}
+		ulTaskNotifyTake( pdTRUE, delay);
+		//xSemaphoreTake( xBinarySemaphore, portMAX_DELAY );
 		led_vermelho.Toggle();
-		_motor->Control_Speed(0);
+		_motor->Control_Speed(motor_speeds[0]);
 	}
 }
 
-void vTask2( void *pvParameters){
+void vTaskCmdLine( void *pvParameters){
 	for(;;){
 		int delay;
-		delay = pdMS_TO_TICKS(10);
+		delay = pdMS_TO_TICKS(100);
 		vTaskDelay(delay);
 		usb_device_class_cdc_vcp.GetData(_usbserialbuffer, 1024);
 		cmdline.In(_usbserialbuffer);
@@ -156,9 +165,10 @@ void vTask2( void *pvParameters){
 
 int main(void)
 {
+  NVIC_PriorityGroupConfig(NVIC_PriorityGroup_4);
   //int i = 0;
   usb.Init();
- // robo.Init();
+  // robo.Init();
 
   SysTick_Config(SystemCoreClock/1000);
 
@@ -168,25 +178,25 @@ int main(void)
 		  NULL, 		//nao usa task parameter
 		  2,			//prioridade 1
 		  NULL);
-   xTaskCreate(	vTaskNRF24TX, //ponteiro para a função que implementa a tarefa
-		  "Task NRF24TX", 	//nome da função. Para facilitar o debug.
-		  700, 		//stack depth
-		  (void*)&nrf24, 		//usa task parameter
-		  2,			//prioridade 2
-		  NULL);
+   //xTaskCreate(	vTaskNRF24TX, //ponteiro para a função que implementa a tarefa
+	//	  "Task NRF24TX", 	//nome da função. Para facilitar o debug.
+	//	  700, 		//stack depth
+	//	  (void*)&nrf24, 		//usa task parameter
+	//	  2,			//prioridade 2
+	//	  NULL);
    //xTaskCreate(	vTaskNRF24RX, //ponteiro para a função que implementa a tarefa
    	//  "Task NRF24RX", 	//nome da função. Para facilitar o debug.
    	//  700, 		//stack depth
    	//  (void*)&nrf24, 		//nao usa task parameter
    	//  1,			//prioridade 1
    	//  NULL);
-   /*xTaskCreate(	vTask2, //ponteiro para a função que implementa a tarefa
-		  "Task 2", 	//nome da função. Para facilitar o debug.
+  xTaskCreate(	vTaskCmdLine, //ponteiro para a função que implementa a tarefa
+		  "Task CmdLine", 	//nome da função. Para facilitar o debug.
 		  700, 		//stack depth
 		  NULL, 		//nao usa task parameter
 		  1,			//prioridade 1
-		  NULL);*/
-    xTaskCreate(	vTaskMotor, //ponteiro para a função que implementa a tarefa
+		  NULL);
+  xTaskCreate(	vTaskMotor, //ponteiro para a função que implementa a tarefa
    		  "Task Motor", 	//nome da função. Para facilitar o debug.
    		  700, 				//stack depth
   		  (void*)&motor0, 			//usa task parameter
